@@ -1,63 +1,35 @@
-from fastapi import FastAPI, Body, HTTPException
-from fastapi.responses import HTMLResponse
-from typing import Dict, Any, Union
 import gradio as gr
-import os
-
-# 1. Environment Logic (Models/Env)
+from fastapi import FastAPI, Body, HTTPException
 from customer_support_env.models import (
     Observation, Action, RewardOutput, 
     ClassifyAction, ReplyAction, EscalateAction, ArchiveAction
 )
 from customer_support_env.env import CustomerSupportEnv
+import os
+
+# 1. Initialize Environment
 env = CustomerSupportEnv()
 
-# 2. Initialize FastAPI
-app = FastAPI(title="OpenEnv: Customer Support Triage")
-
-@app.get("/health")
-def health():
-    return {"status": "ok", "env": "customer-support"}
-
-@app.post("/reset", response_model=Observation)
-async def reset(task: str = "easy"):
-    return await env.reset(task_name=task)
-
-@app.post("/step", response_model=RewardOutput)
-async def step(action: Action = Body(...)):
-    return await env.step(action)
-
-# --- ROBUST UI LOADER at Root ---
-@app.get("/", response_class=HTMLResponse)
-def root_page():
-    """Serves the UI inside a full-screen iframe to avoid proxy and mixed-content issues."""
-    return """
-    <!DOCTYPE html>
-    <html style="margin: 0; padding: 0; height: 100%; overflow: hidden;">
-    <head>
-        <title>OpenEnv Explorer</title>
-        <style>iframe { width: 100%; height: 100%; border: none; margin: 0; padding: 0; }</style>
-    </head>
-    <body style="margin: 0; padding: 0; height: 100%;">
-        <iframe src="./web/"></iframe>
-    </body>
-    </html>
-    """
-
-# 3. Create Gradio UI
+# 2. Define the UI
 def create_web_ui():
     with gr.Blocks(title="OpenEnv Explorer", theme=gr.themes.Default()) as demo:
         gr.Markdown("# 📧 OpenEnv: Customer Support Triage")
+        gr.Markdown("Agentic execution environment for customer support email triage.")
+        
         with gr.Row():
-            task_select = gr.Dropdown(["easy", "medium", "hard"], label="Task", value="easy")
-            reset_btn = gr.Button("Reset", variant="primary")
-        obs_json = gr.JSON(label="Observation View")
+            task_select = gr.Dropdown(["easy", "medium", "hard"], label="Select Task", value="easy")
+            reset_btn = gr.Button("Reset Environment", variant="primary")
+        
+        with gr.Row():
+            obs_json = gr.JSON(label="Observation View")
+        
         with gr.Row():
             with gr.Column():
                 atype = gr.Radio(["classify", "reply", "escalate", "archive"], label="Action", value="classify")
                 eid = gr.Textbox(label="Email ID")
-                val = gr.Textbox(label="Parameter")
-                step_btn = gr.Button("Send", variant="secondary")
+                val = gr.Textbox(label="Value (Category or Content)")
+                step_btn = gr.Button("Execute", variant="secondary")
+            
             with gr.Column():
                 rew = gr.Number(label="Reward")
                 total = gr.Number(label="Total Reward")
@@ -79,13 +51,29 @@ def create_web_ui():
         
     return demo
 
-# 4. Mount Gradio to /web
+# 3. Create the Gradio app (main entry point)
 demo = create_web_ui()
-app = gr.mount_gradio_app(app, demo, path="/web")
+
+# 4. Add OpenEnv API routes directly to the Gradio app's underlying FastAPI instance
+# This is the most robust way to ensure both work at the root with HTTPS support.
+app = demo.app
+
+@app.get("/health")
+def health():
+    return {"status": "ok", "env": "customer-support"}
+
+@app.post("/reset", response_model=Observation)
+async def reset(task: str = "easy"):
+    return await env.reset(task_name=task)
+
+@app.post("/step", response_model=RewardOutput)
+async def step(action: Action = Body(...)):
+    return await env.step(action)
 
 def main():
     import uvicorn
     port = int(os.environ.get("PORT", 7860))
+    # We run 'demo.app' which is the underlying Starlette/FastAPI app
     uvicorn.run(app, host="0.0.0.0", port=port)
 
 if __name__ == "__main__":
