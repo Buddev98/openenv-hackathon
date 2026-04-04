@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException, Body
+from fastapi.responses import RedirectResponse
 from customer_support_env.models import (
     Observation, Action, RewardOutput, 
     ClassifyAction, ReplyAction, EscalateAction, ArchiveAction
@@ -55,7 +56,7 @@ def create_web_ui():
             # Formulate action
             data = {"action_type": atype, "email_id": eid}
             if atype == "classify": data["category"] = cat
-            if atype == "reply": data["content"] = cat # Content for reply, using cat input as proxy
+            if atype == "reply": data["content"] = cont
             if atype == "escalate": pass
             
             # Step
@@ -67,9 +68,14 @@ def create_web_ui():
         
     return demo
 
-# Mount Gradio to root / (This ensures it is the default page for the Space)
+# Mount Gradio to /web
 web_ui = create_web_ui()
-app = gr.mount_gradio_app(app, web_ui, path="/")
+app = gr.mount_gradio_app(app, web_ui, path="/web")
+
+# Redirect root / to /web/
+@app.get("/")
+def redirect_to_web():
+    return RedirectResponse(url="/web/")
 
 def main():
     import uvicorn
