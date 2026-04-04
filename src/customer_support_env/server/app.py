@@ -1,4 +1,5 @@
-from fastapi import FastAPI, HTTPException, Body
+from fastapi import FastAPI, Body
+from fastapi.responses import HTMLResponse
 from customer_support_env.models import (
     Observation, Action, RewardOutput, 
     ClassifyAction, ReplyAction, EscalateAction, ArchiveAction
@@ -7,7 +8,7 @@ from customer_support_env.env import CustomerSupportEnv
 from typing import Dict, Any, Union
 import gradio as gr
 
-# Initialize FastAPI for the API endpoints
+# Initialize FastAPI
 app = FastAPI(title="OpenEnv API")
 env = CustomerSupportEnv()
 
@@ -21,66 +22,82 @@ async def reset(task: str = "easy"):
 
 @app.post("/step", response_model=RewardOutput)
 async def step(action: Union[ClassifyAction, ReplyAction, EscalateAction, ArchiveAction] = Body(...)):
-    if hasattr(action, 'action_type'):
-        # Validates and applies action
-        return await env.step(action)
-    raise HTTPException(status_code=400, detail="Invalid action format")
+    # Applies an action and returns the reward/new observation
+    return await env.step(action)
 
-# --- CONSOLIDATED WEB INTERFACE ---
+# --- PREMIUM WEB INTERFACE ---
 def create_web_ui():
     with gr.Blocks(title="OpenEnv Explorer", theme=gr.themes.Default()) as demo:
         gr.Markdown("# 📧 OpenEnv: Customer Support Triage")
-        gr.Markdown("Interactive explorer for the agentic execution environment.")
+        gr.Markdown("Directly interact with the environment through this interactive panel.")
         
         with gr.Row():
-            with gr.Column(scale=1):
-                task_select = gr.Dropdown(["easy", "medium", "hard"], label="Select Task", value="easy")
-                reset_btn = gr.Button("Reset Environment", variant="primary")
-                
-                gr.Markdown("### 🔧 Execute Action")
-                action_type = gr.Radio(["classify", "reply", "escalate", "archive"], label="Action Type", value="classify")
-                email_id = gr.Textbox(label="Email ID (e.g., email_1)")
-                extra_input = gr.Textbox(label="Category / Content (optional)")
-                step_btn = gr.Button("Send Action", variant="secondary")
+            task_select = gr.Dropdown(["easy", "medium", "hard"], label="Select Task", value="easy")
+            reset_btn = gr.Button("Reset Environment", variant="primary")
+        
+        with gr.Row():
+            obs_json = gr.JSON(label="Observation View")
+        
+        with gr.Row():
+            with gr.Column():
+                action_type = gr.Radio(["classify", "reply", "escalate", "archive"], label="Action", value="classify")
+                email_id = gr.Textbox(label="Email ID")
+                extra = gr.Textbox(label="Value (Category or Reply Content)")
+                step_btn = gr.Button("Execute", variant="secondary")
             
-            with gr.Column(scale=2):
-                gr.Markdown("### 🔍 Environment State")
-                obs_json = gr.JSON(label="Observation")
-                
-                with gr.Row():
-                    reward_out = gr.Number(label="Last Step Reward", precision=2)
-                    total_reward_out = gr.Number(label="Total Task Reward", precision=2)
-                    done_out = gr.Checkbox(label="Task Complete")
+            with gr.Column():
+                reward_out = gr.Number(label="Step Reward")
+                total_reward_out = gr.Number(label="Total Reward")
+                done_out = gr.Checkbox(label="Is Task Done")
 
         async def ui_reset(t):
             res = await env.reset(t)
             return res.model_dump(), 0, 0, False
 
-        async def ui_step(atype, eid, extra):
-            # Map UI to Environment Action
+        async def ui_step(atype, eid, val):
             data = {"action_type": atype, "email_id": eid}
-            if atype == "classify": data["category"] = extra
-            if atype == "reply": data["content"] = extra
+            if atype == "classify": data["category"] = val
+            if atype == "reply": data["content"] = val
             
-            try:
-                res = await env.step(Action(**data))
-                return res.observation.model_dump(), res.reward, res.info.get("total_reward", 0), res.done
-            except Exception as e:
-                return {"error": str(e)}, 0, 0, False
+            res = await env.step(Action(**data))
+            return res.observation.model_dump(), res.reward, res.info.get("total_reward", 0), res.done
 
         reset_btn.click(ui_reset, inputs=[task_select], outputs=[obs_json, reward_out, total_reward_out, done_out])
-        step_btn.click(ui_step, inputs=[action_type, email_id, extra_input], outputs=[obs_json, reward_out, total_reward_out, done_out])
+        step_btn.click(ui_step, inputs=[action_type, email_id, extra], outputs=[obs_json, reward_out, total_reward_out, done_out])
         
     return demo
 
-# Mount Gradio directly at / and ensure it is the main application
+# Mount Gradio safely at /web
 web_ui = create_web_ui()
-app = gr.mount_gradio_app(app, web_ui, path="/")
+app = gr.mount_gradio_app(app, web_ui, path="/web")
+
+# --- ROBUST ROOT HANDLER ---
+@app.get("/", response_class=HTMLResponse)
+def root_page():
+    """Returns a robust HTML page that redirects to /web/ to avoid HF Space 404s."""
+    return """
+    <html>
+        <head>
+            <meta http-equiv="refresh" content="0; url='/web/'" />
+            <title>Loading OpenEnv UI...</title>
+            <style>
+                body { font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; background: #0b0f19; color: white; }
+                .loader { border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; width: 40px; height: 40px; animation: spin 2s linear infinite; }
+                @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+            </style>
+        </head>
+        <body>
+            <div style="text-align: center;">
+                <div class="loader" style="margin: 0 auto 20px;"></div>
+                <h2>Launching OpenEnv Explorer...</h2>
+                <p>If not redirected, <a href="/web/" style="color: #3498db;">click here</a>.</p>
+            </div>
+        </body>
+    </html>
+    """
 
 def main():
-    import uvicorn
-    # Use 0.0.0.0 and the PORT environment variable (standard for HF)
-    import os
+    import uvicorn, os
     port = int(os.environ.get("PORT", 7860))
     uvicorn.run(app, host="0.0.0.0", port=port)
 
