@@ -1,0 +1,15 @@
+Metadata-Version: 2.4
+Name: customer-support-env
+Version: 1.0.0
+Summary: A customer support triage environment for AI agents.
+Requires-Python: >=3.10
+Requires-Dist: fastapi
+Requires-Dist: uvicorn
+Requires-Dist: pydantic
+Requires-Dist: openai
+Requires-Dist: pyyaml
+Requires-Dist: python-dotenv
+Requires-Dist: jinja2
+Requires-Dist: requests
+Requires-Dist: httpx
+Requires-Dist: openenv-core>=0.2.0

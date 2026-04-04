@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+pydantic
+openai
+pyyaml
+python-dotenv
+jinja2
+requests
+httpx
+openenv-core>=0.2.0

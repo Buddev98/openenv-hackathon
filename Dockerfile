@@ -4,6 +4,7 @@ FROM python:3.10-slim
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
 ENV PORT 7860
+ENV PYTHONPATH="/app/src"
 
 # Set working directory
 WORKDIR /app
@@ -20,11 +21,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy the project files
 COPY . .
 
-# Install the package in normal mode to register entry points
-RUN pip install --no-cache-dir .
-
 # Expose port 7860 (Hugging Face standard)
 EXPOSE 7860
 
 # Command to run the application using the wrapper
+# We use the wrapper in the root which imports from src via PYTHONPATH
 CMD ["python", "server/app.py"]
