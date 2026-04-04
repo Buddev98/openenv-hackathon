@@ -1,3 +1,12 @@
+---
+title: Customer Support Env
+emoji: mail
+colorFrom: blue
+colorTo: indigo
+sdk: docker
+pinned: false
+---
+
 # OpenEnv: Customer Support Email Triage
 
 [OpenEnv Compatible](https://github.com/meta-pytorch/OpenEnv)
