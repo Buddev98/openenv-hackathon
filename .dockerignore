@@ -1,0 +1,16 @@
+__pycache__/
+*.py[cod]
+*$py.class
+.env
+.venv
+env/
+venv/
+.git/
+.gitignore
+.dockerignore
+.pytest_cache/
+uv.lock
+pyproject.toml (Wait, actually I need pyproject.toml in the docker)
+*.md
+inference.py
+tests/

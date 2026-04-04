@@ -1,0 +1,38 @@
+name: customer-support-env
+version: 1.0.0
+description: A customer support triage environment for AI agents.
+task_schema:
+  - id: easy
+    description: Classify emails as spam or important.
+  - id: medium
+    description: Classify and reply to customer emails.
+  - id: hard
+    description: Multi-step support workflow (refunds/technical escalation).
+
+action_schema:
+  - type: classify
+    args:
+      email_id: string
+      category: string (spam, refund, technical, important, general)
+  - type: reply
+    args:
+      email_id: string
+      content: string
+  - type: escalate
+    args:
+      email_id: string
+  - type: archive
+    args:
+      email_id: string
+
+observation_schema:
+  - emails: list[Email]
+  - step_count: integer
+  - max_steps: integer
+  - message: string (optional)
+
+server:
+  port: 7860
+  endpoints:
+    reset: /reset
+    step: /step

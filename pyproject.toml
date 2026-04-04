@@ -1,0 +1,28 @@
+[project]
+name = "customer-support-env"
+version = "1.0.0"
+description = "A customer support triage environment for AI agents."
+requires-python = ">=3.10"
+dependencies = [
+    "fastapi",
+    "uvicorn",
+    "pydantic",
+    "openai",
+    "pyyaml",
+    "python-dotenv",
+    "jinja2",
+    "requests",
+    "httpx",
+    "openenv-core>=0.2.0"
+]
+
+[project.scripts]
+server = "customer_support_env.server.app:main"
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["customer_support_env*"]
