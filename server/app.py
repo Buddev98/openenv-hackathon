@@ -1,49 +1,16 @@
-from fastapi import FastAPI, Body, HTTPException
-from fastapi.responses import HTMLResponse, RedirectResponse
-from typing import Dict, Any, Union, Optional
-import os
 import gradio as gr
-
-# Import from the absolute package structure
+from fastapi import FastAPI, Body, HTTPException
 from customer_support_env.models import (
     Observation, Action, RewardOutput, 
     ClassifyAction, ReplyAction, EscalateAction, ArchiveAction
 )
 from customer_support_env.env import CustomerSupportEnv
+import os
 
-# Initialize FastAPI and Environment
-app = FastAPI(title="OpenEnv: Customer Support Triage")
+# 1. Initialize Environment
 env = CustomerSupportEnv()
 
-@app.get("/health")
-def health():
-    return {"status": "ok", "env": "customer-support"}
-
-@app.post("/reset", response_model=Observation)
-async def reset(task: str = "easy"):
-    return await env.reset(task_name=task)
-
-@app.post("/step", response_model=RewardOutput)
-async def step(action: Union[ClassifyAction, ReplyAction, EscalateAction, ArchiveAction] = Body(...)):
-    # Standard OpenEnv Step route
-    return await env.step(action)
-
-# --- ROBUST REDIRECT HANDLER (Must be registered before mounting) ---
-@app.get("/", response_class=HTMLResponse)
-def root_page():
-    return """
-    <html>
-        <head><meta http-equiv="refresh" content="0; url='/web/'" /></head>
-        <body style="background: #0b0f19; color: white; display: flex; justify-content: center; align-items: center; height: 100vh; font-family: sans-serif;">
-            <div style="text-align: center;">
-                <h2>📧 Launching OpenEnv UI...</h2>
-                <p>Redirecting to <a href="/web/" style="color: #3498db;">/web/</a></p>
-            </div>
-        </body>
-    </html>
-    """
-
-# --- PREMIUM WEB INTERFACE ---
+# 2. Define the Premium Web UI
 def create_web_ui():
     with gr.Blocks(title="OpenEnv Explorer", theme=gr.themes.Default()) as demo:
         gr.Markdown("# 📧 OpenEnv: Customer Support Triage")
@@ -64,7 +31,7 @@ def create_web_ui():
                 step_btn = gr.Button("Execute", variant="secondary")
             
             with gr.Column():
-                rew = gr.Number(label="Reward")
+                rew = gr.Number(label="Step Reward")
                 total = gr.Number(label="Total Reward")
                 done = gr.Checkbox(label="Done")
 
@@ -75,7 +42,7 @@ def create_web_ui():
         async def ui_step(at, id, v):
             data = {"action_type": at, "email_id": id}
             if at == "classify": data["category"] = v
-            if at =="reply": data["content"] = v
+            if at == "reply": data["content"] = v
             res = await env.step(Action(**data))
             return res.observation.model_dump(), res.reward, res.info.get("total_reward", 0), res.done
 
@@ -84,14 +51,33 @@ def create_web_ui():
         
     return demo
 
-# Mount Gradio safely at /web
+# 3. Create the Main App (Gradio first)
 demo = create_web_ui()
-app = gr.mount_gradio_app(app, demo, path="/web")
+
+# 4. Initialize FastAPI for the OpenEnv API
+api = FastAPI(title="OpenEnv API")
+
+@api.get("/health")
+def health():
+    return {"status": "ok", "env": "customer-support"}
+
+@api.post("/reset", response_model=Observation)
+async def reset(task: str = "easy"):
+    return await env.reset(task_name=task)
+
+@api.post("/step", response_model=RewardOutput)
+async def step(action: Action = Body(...)):
+    # Standard OpenEnv Step route
+    return await env.step(action)
+
+# 5. Mount the API into the Gradio app at /api prefix for stability
+# Note: We will keep the root (/) for the UI to avoid Mixed Content errors
+app = gr.mount_fastapi_app(demo, api, path="/api")
 
 def main():
     import uvicorn
-    # Use standard 7860 or environment variable for HF Spaces
     port = int(os.environ.get("PORT", 7860))
+    # Run the combined app
     uvicorn.run(app, host="0.0.0.0", port=port)
 
 if __name__ == "__main__":

@@ -64,7 +64,7 @@ def run_evaluation(task_name):
     
     # 1. Reset Environment
     try:
-        reset_url = f"{API_BASE_URL}/reset?task={task_name}"
+        reset_url = f"{API_BASE_URL}/api/reset?task={task_name}"
         response = requests.post(reset_url, timeout=30)
         response.raise_for_status()
         observation = response.json()
@@ -89,7 +89,7 @@ def run_evaluation(task_name):
             
         # Execute Step
         try:
-            step_url = f"{API_BASE_URL}/step"
+            step_url = f"{API_BASE_URL}/api/step"
             step_response = requests.post(step_url, json=action, timeout=30)
             step_response.raise_for_status()
             result = step_response.json()

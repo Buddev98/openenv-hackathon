@@ -9,18 +9,18 @@ class CustomerSupportClient:
 
     def reset(self, task_name: str = "easy") -> Dict[str, Any]:
         """Reset the environment for a specific task."""
-        response = httpx.post(f"{self.base_url}/reset?task={task_name}")
+        response = httpx.post(f"{self.base_url}/api/reset?task={task_name}")
         response.raise_for_status()
         return response.json()
 
     def step(self, action: Dict[str, Any]) -> Dict[str, Any]:
         """Take a step in the environment."""
-        response = httpx.post(f"{self.base_url}/step", json=action)
+        response = httpx.post(f"{self.base_url}/api/step", json=action)
         response.raise_for_status()
         return response.json()
 
     def health(self) -> Dict[str, Any]:
         """Check the health of the server."""
-        response = httpx.get(f"{self.base_url}/health")
+        response = httpx.get(f"{self.base_url}/api/health")
         response.raise_for_status()
         return response.json()

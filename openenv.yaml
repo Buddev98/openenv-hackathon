@@ -34,5 +34,5 @@ observation_schema:
 server:
   port: 7860
   endpoints:
-    reset: /reset
-    step: /step
+    reset: /api/reset
+    step: /api/step
