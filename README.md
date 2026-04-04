@@ -1,6 +1,6 @@
 ---
 title: Customer Support Env
-emoji: mail
+emoji: 📧
 colorFrom: blue
 colorTo: indigo
 sdk: docker
