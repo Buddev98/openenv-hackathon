@@ -8,3 +8,4 @@ jinja2
 requests
 httpx
 openenv-core
+gradio
