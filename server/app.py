@@ -1,8 +1,7 @@
 import gradio as gr
-from fastapi import FastAPI, Body, HTTPException
+from fastapi import FastAPI, Body
 from customer_support_env.models import (
     Observation, Action, RewardOutput, 
-    ClassifyAction, ReplyAction, EscalateAction, ArchiveAction
 )
 from customer_support_env.env import CustomerSupportEnv
 import os
@@ -51,33 +50,35 @@ def create_web_ui():
         
     return demo
 
-# 3. Create the Main App (Gradio first)
-demo = create_web_ui()
+# 3. Initialize FastAPI for the OpenEnv API
+api_app = FastAPI(title="OpenEnv API")
 
-# 4. Initialize FastAPI for the OpenEnv API
-api = FastAPI(title="OpenEnv API")
-
-@api.get("/health")
+@api_app.get("/health")
 def health():
     return {"status": "ok", "env": "customer-support"}
 
-@api.post("/reset", response_model=Observation)
+@api_app.post("/reset", response_model=Observation)
 async def reset(task: str = "easy"):
     return await env.reset(task_name=task)
 
-@api.post("/step", response_model=RewardOutput)
+@api_app.post("/step", response_model=RewardOutput)
 async def step(action: Action = Body(...)):
-    # Standard OpenEnv Step route
     return await env.step(action)
 
-# 5. Mount the API into the Gradio app at /api prefix for stability
-# Note: We will keep the root (/) for the UI to avoid Mixed Content errors
-app = gr.mount_fastapi_app(demo, api, path="/api")
+# 4. Create the Main FastAPI app and mount everything
+app = FastAPI()
+
+# Mount the API app at /api
+app.mount("/api", api_app)
+
+# Mount the Gradio UI at the root /
+# This uses the correct Gradio function: mount_gradio_app
+demo = create_web_ui()
+app = gr.mount_gradio_app(app, demo, path="/")
 
 def main():
     import uvicorn
     port = int(os.environ.get("PORT", 7860))
-    # Run the combined app
     uvicorn.run(app, host="0.0.0.0", port=port)
 
 if __name__ == "__main__":
