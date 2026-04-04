@@ -16,12 +16,10 @@ def health():
 
 @app.post("/reset", response_model=Observation)
 async def reset(task: str = "easy"):
-    # Returns the initial state of the environment
     return await env.reset(task_name=task)
 
 @app.post("/step", response_model=RewardOutput)
 async def step(action: Union[ClassifyAction, ReplyAction, EscalateAction, ArchiveAction] = Body(...)):
-    # Applies an action and returns the reward/new observation
     return await env.step(action)
 
 # --- PREMIUM WEB INTERFACE ---
@@ -57,7 +55,8 @@ def create_web_ui():
             # Formulate action
             data = {"action_type": atype, "email_id": eid}
             if atype == "classify": data["category"] = cat
-            if atype == "reply": data["content"] = cont
+            if atype == "reply": data["content"] = cat # Content for reply, using cat input as proxy
+            if atype == "escalate": pass
             
             # Step
             res = await env.step(Action(**data))
@@ -68,9 +67,9 @@ def create_web_ui():
         
     return demo
 
-# Mount Gradio to /web
+# Mount Gradio to root / (This ensures it is the default page for the Space)
 web_ui = create_web_ui()
-app = gr.mount_gradio_app(app, web_ui, path="/web")
+app = gr.mount_gradio_app(app, web_ui, path="/")
 
 def main():
     import uvicorn
