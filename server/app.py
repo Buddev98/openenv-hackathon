@@ -214,11 +214,17 @@ UI_HTML = """<!DOCTYPE html>
 async def ui():
     return UI_HTML
 
-# OpenEnv API routes — also accessible at /web prefix for HF proxy compatibility
+# OpenEnv API routes (at root AND /web for HF proxy compatibility)
 @app.get("/health")
 @app.get("/web/health")
 def health():
     return {"status": "ok", "env": "customer-support"}
+
+@app.get("/state")
+@app.get("/web/state")
+def state():
+    """Returns current environment state (OpenEnv spec compliance)."""
+    return env.get_state()
 
 @app.post("/reset", response_model=Observation)
 @app.post("/web/reset")

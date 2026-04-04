@@ -44,6 +44,17 @@ class CustomerSupportEnv:
             message=message
         )
 
+    def get_state(self) -> Dict[str, Any]:
+        """Returns the current environment state as a plain dict (for /state endpoint)."""
+        return {
+            "task": self.task_name,
+            "step_count": self.step_count,
+            "max_steps": self.max_steps,
+            "total_reward": round(self.total_reward, 3),
+            "emails_total": len(self.emails),
+            "emails_handled": sum(1 for e in self.emails if e.status.value != "received"),
+        }
+
     async def step(self, action: Action) -> RewardOutput:
         self.step_count += 1
         
