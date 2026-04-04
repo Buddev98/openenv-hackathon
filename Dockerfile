@@ -1,4 +1,4 @@
-FROM python:3.10-slim
+FROM python:3.10
 
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE 1
@@ -9,12 +9,7 @@ ENV PYTHONPATH="/app/src"
 # Set working directory
 WORKDIR /app
 
-# Install system dependencies (minimal)
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
-    && rm -rf /var/lib/apt/lists/*
-
-# Install python dependencies
+# Install python dependencies from requirements.txt
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
@@ -25,5 +20,4 @@ COPY . .
 EXPOSE 7860
 
 # Command to run the application using the wrapper
-# We use the wrapper in the root which imports from src via PYTHONPATH
 CMD ["python", "server/app.py"]
