@@ -106,7 +106,8 @@ class DefaultGrader(BaseGrader):
 
     def get_final_score(self, emails: List[Email]) -> float:
         if not emails:
-            return 0.0
+            # Clamp: never return exactly 0.0 — validator requires strictly > 0
+            return 0.01
         
         total_score = 0.0
         for email in emails:
@@ -127,5 +128,8 @@ class DefaultGrader(BaseGrader):
                 email_score += 0.6
                 
             total_score += email_score
-            
-        return round(total_score / len(emails), 2)
+        
+        raw = total_score / len(emails)
+        # Clamp strictly to open interval (0, 1) — validator rejects 0.0 and 1.0 exactly
+        clamped = max(0.01, min(0.99, raw))
+        return round(clamped, 4)

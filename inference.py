@@ -144,8 +144,9 @@ def run_evaluation(task_name):
             break
 
     # 3. Final Summary
-    score = float(result.get("info", {}).get("final_score", 0.0)) if result else 0.0
-    score = max(0.0, min(1.0, score))
+    score = float(result.get("info", {}).get("final_score", 0.01)) if result else 0.01
+    # Clamp strictly to open interval (0, 1) — validator rejects exactly 0.0 or 1.0
+    score = max(0.01, min(0.99, score))
     success = score >= 0.5
 
     # [END] — REQUIRED LOG FORMAT
